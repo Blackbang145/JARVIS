@@ -224,7 +224,7 @@ function initBatteryAndGPS() {
                 // DÉTECTION VITESSE EXCESSIVE (Seuil 110 km/h)
                 if (speedKmH >= SPEED_LIMIT_KMH && currentMode !== 'alert') {
                     setMode('alert');
-                    speak(`Attention Monsieur, vitesse excessive détectée. Vous roulez à ${speedKmH} kilomètres heure. Veuillez réduire votre allure.`);
+                    speak("Attention Monsieur, vitesse excessive. Veuillez ralentir et conduire avec prudence s'il vous plaît.");
                 } else if (speedKmH < SPEED_LIMIT_KMH && currentMode === 'alert') {
                     setMode('standard');
                     speak("Vitesse réinitialisée sous le seuil critique. Retour au mode Standard.");
