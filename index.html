@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. - Dashboard Suzuki</title>
+
+    <!-- Icône de l'application uniquement (Onglet navigateur & Écran d'accueil mobile) -->
+    <link rel="icon" type="image/jpeg" href="jarvis2.jpeg">
+    <link rel="apple-touch-icon" href="jarvis2.jpeg">
+    <meta name="theme-color" content="#0d1b2a">
+
+    <!-- Fichier CSS principal -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-standard">
+
+    <div class="dashboard-container">
+        <!-- HEADER : Horloge & Bouton BLE -->
+        <header class="hud-header">
+            <div class="hud-box">
+                <span class="hud-label">HORLOGE</span>
+                <span id="clockVal" class="hud-value">--:--:--</span>
+            </div>
+
+            <button id="bleBtn" class="hud-btn" onclick="connectBluetoothWinzwon()">
+                CONNECTER LEDS BLE ⚡
+            </button>
+
+            <div class="hud-box">
+                <span class="hud-label">BATTERIE</span>
+                <span id="batteryVal" class="hud-value">--%</span>
+                <div class="battery-bar-container">
+                    <div id="batteryBar" class="battery-bar"></div>
+                </div>
+                <span id="batteryStatus" class="hud-subtext">SUR BATTERIE</span>
+            </div>
+        </header>
+
+        <!-- CENTRE : Visualiseur / Texte HUD -->
+        <main class="hud-main">
+            <div class="speech-hud">
+                <p id="speechText">EN ATTENTE D'ACTIVATION...</p>
+            </div>
+        </main>
+
+        <!-- FOOTER : Vitesse GPS, Direction, Météo & Mode -->
+        <footer class="hud-footer">
+            <div class="hud-box">
+                <span class="hud-label">VITESSE GPS</span>
+                <div class="speed-display">
+                    <span id="speedVal" class="hud-value-large">0</span>
+                    <span class="unit">KM/H</span>
+                </div>
+                <span id="headingVal" class="hud-subtext">N (0°)</span>
+            </div>
+
+            <div class="hud-box">
+                <span class="hud-label">MODE ACTIF</span>
+                <span id="modeDisplay" class="hud-value-highlight">STD</span>
+            </div>
+
+            <div class="hud-box">
+                <span class="hud-label">MÉTÉO</span>
+                <span id="tempVal" class="hud-value">--°C</span>
+                <span id="weatherDesc" class="hud-subtext">RECHERCHE...</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Script JavaScript principal -->
+    <script src="app.js"></script>
+</body>
+</html>
