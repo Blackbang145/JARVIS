@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J.A.R.V.I.S. TACTICAL DASHBOARD - SUZUKI DZIRE EDITION
+   J.A.R.V.I.S. DASHBOARD - 100% TACTILE (ZERO RECONNAISSANCE VOCALE)
    ========================================================================== */
 
 let bleDevice = null;
@@ -13,7 +13,7 @@ let currentSpeed = 0;
 const WINZWON_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 const WINZWON_CHARACTERISTIC_UUID = "0000fff3-0000-1000-8000-00805f9b34fb";
 
-// 1. MOTEUR AUDIO ET SYNTHÈSE VOCALE
+// 1. SYNTHÈSE VOCALE (JARVIS PARLE QUAND ON TAPE UN BOUTON)
 function initAudioEngine() {
     if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -70,7 +70,7 @@ function stopAlertBlinking() {
     }
 }
 
-// 2. RÉPONSES SCÉNARISÉES ET ACTION MUSIQUE
+// 2. ACTIONS DES BOUTONS TACTILES
 function triggerJarvisGreeting() {
     const greetings = [
         "Systèmes opérationnels. Je suis à votre entière disposition, Monsieur.",
@@ -91,7 +91,6 @@ function toggleSwitchMode() {
 
 function playMusicControl() {
     speak("Lancement de la playlist audio, Monsieur. Bon voyage.");
-    // Vous pouvez ouvrir l'application de musique par défaut du système si souhaité
     window.location.href = "intent://open/#Intent;scheme=music;package=com.google.android.music;end";
 }
 
@@ -156,7 +155,7 @@ function setMode(mode) {
     }
 }
 
-// 4. BLUETOOTH BLE AVEC ACCUEIL PERSONNALISÉ SUZUKI DZIRE
+// 4. BLUETOOTH BLE
 async function connectBluetoothWinzwon() {
     initAudioEngine();
     const btn = document.getElementById('bleBtn');
