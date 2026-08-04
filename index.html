@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S. - Dashboard</title>
+    <title>J.A.R.V.I.S. - Tactical Dashboard</title>
 
-    <!-- Manifeste PWA & Meta Tags Mobile / iOS -->
+    <!-- Manifeste PWA & Meta Tags Mobile -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="J.A.R.V.I.S.">
 
-    <!-- Icône de l'application -->
     <link rel="icon" type="image/jpeg" href="jarvis2.jpeg">
     <link rel="apple-touch-icon" href="jarvis2.jpeg">
     <meta name="theme-color" content="#00f3ff">
 
-    <!-- Fichier CSS principal -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="mode-standard">
@@ -26,17 +24,16 @@
         <!-- HEADER : Stats Systèmes -->
         <header class="hud-header">
             <div class="hud-box">
-                <span class="hud-label">HORLOGE</span>
+                <span class="hud-label">HORLOGE SYSTÈME</span>
                 <span id="clockVal" class="hud-value">--:--:--</span>
             </div>
 
-            <!-- BOUTON BLE -->
             <button id="bleBtn" class="hud-btn" onclick="connectBluetoothWinzwon()">
-                ÉTABLIR LA CONNEXION BLE ⚡
+                ÉTABLIR LIAISON BLE ⚡
             </button>
 
             <div class="hud-box">
-                <span class="hud-label">BATTERIE</span>
+                <span class="hud-label">ALIMENTATION</span>
                 <span id="batteryVal" class="hud-value">--%</span>
                 <div class="battery-bar-container">
                     <div id="batteryBar" class="battery-bar"></div>
@@ -45,9 +42,9 @@
             </div>
         </header>
 
-        <!-- CENTRE : RÉACTEUR ARC STARK -->
+        <!-- CENTRE : RÉACTEUR ARC & ÉTAT -->
         <main class="hud-main">
-            <div class="arc-container" id="arcBtn" style="cursor: pointer;">
+            <div class="arc-container" id="arcBtn" onclick="triggerJarvisGreeting()" style="cursor: pointer;">
                 <div class="arc-reactor">
                     <div class="outer-ring"></div>
                     <div class="tech-ring"></div>
@@ -57,17 +54,20 @@
                 </div>
             </div>
 
-            <!-- BOUTON DE FORÇAGE VOCAL ET AUDIO -->
-            <button id="forceStartBtn" class="hud-btn" style="margin-top: 10px; z-index: 10;">
-                ACTIVER LE MICRO & AUDIO 🎙️
-            </button>
-
             <div class="speech-hud">
-                <p id="speechText">TOUCHEZ L'ÉCRAN OU LE BOUTON POUR DÉMARRER</p>
+                <p id="speechText">SYSTÈME EN ATTENTE D'INITIALISATION</p>
+            </div>
+
+            <!-- PANNEAU DE COMMANDES TACTILES -->
+            <div class="control-panel">
+                <button class="control-btn btn-chill" onclick="setMode('chill')">CHILL MODE</button>
+                <button class="control-btn btn-switch" onclick="toggleSwitchMode()">SWITCH (STD/OVER)</button>
+                <button class="control-btn btn-alert" onclick="setMode('alert')">ALERTE</button>
+                <button class="control-btn btn-info" onclick="speakStatusReport()">RAPPORT SYSTÈME</button>
             </div>
         </main>
 
-        <!-- FOOTER : Indicateurs de Conduite -->
+        <!-- FOOTER : Télémétrie -->
         <footer class="hud-footer">
             <div class="hud-box">
                 <span class="hud-label">VITESSE GPS</span>
@@ -75,7 +75,7 @@
                     <span id="speedVal" class="hud-value-large">0</span>
                     <span class="unit">KM/H</span>
                 </div>
-                <span id="headingVal" class="hud-subtext">N (0°)</span>
+                <span id="headingVal" class="hud-subtext">CAP 0°</span>
             </div>
 
             <div class="hud-box">
@@ -84,23 +84,20 @@
             </div>
 
             <div class="hud-box">
-                <span class="hud-label">MÉTÉO</span>
+                <span class="hud-label">CONDITIONS MÉTÉO</span>
                 <span id="tempVal" class="hud-value">--°C</span>
-                <span id="weatherDesc" class="hud-subtext">RECHERCHE...</span>
+                <span id="weatherDesc" class="hud-subtext">ACQUISITION...</span>
             </div>
         </footer>
     </div>
 
-    <!-- Script JavaScript principal -->
     <script src="app.js"></script>
-
-    <!-- Enregistrement du Service Worker PWA -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker J.A.R.V.I.S. enregistré:', reg.scope))
-                    .catch(err => console.log('Échec Service Worker:', err));
+                    .then(reg => console.log('Service Worker J.A.R.V.I.S. actif'))
+                    .catch(err => console.log('Erreur SW:', err));
             });
         }
     </script>
