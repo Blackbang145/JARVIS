@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J.A.R.V.I.S. SYSTEM - FORCAGE MICRO & AUDIO (OPTIMISÉ ANDROID / PWA)
+   J.A.R.V.I.S. SYSTEM - CORE CONTROLLER & VOICE ENGINE (PWA READY)
    ========================================================================== */
 
 let bleDevice = null;
@@ -16,7 +16,7 @@ let isSystemActive = false;
 const WINZWON_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 const WINZWON_CHARACTERISTIC_UUID = "0000fff3-0000-1000-8000-00805f9b34fb";
 
-// 1. DÉBLOCAGE DÉFINITIF DU SYSTÈME AUDIO (HAUT-PARLEURS)
+// 1. DÉBLOCAGE AUDIO ET PAROLE
 function forceUnlockAudio() {
     if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -28,7 +28,6 @@ function forceUnlockAudio() {
         audioCtx.resume();
     }
 
-    // Joue un son inaudible pour débloquer le canal SpeechSynthesis d'Android
     if ('speechSynthesis' in window) {
         const silentUtterance = new SpeechSynthesisUtterance('');
         silentUtterance.volume = 0;
@@ -36,7 +35,6 @@ function forceUnlockAudio() {
     }
 }
 
-// SYNTHÈSE VOCALE
 function speak(text) {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -48,7 +46,6 @@ function speak(text) {
     }
 }
 
-// SIGNAL SONORE
 function playWarningBeep() {
     try {
         forceUnlockAudio();
@@ -93,7 +90,7 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// 3. GESTION DES MODES ET DES LEDS BLE
+// 3. GESTION DES MODES & BLE
 function setMode(mode) {
     const body = document.body;
     const modeDisplay = document.getElementById('modeDisplay');
@@ -140,7 +137,7 @@ function setMode(mode) {
     }
 }
 
-// 4. CONNEXION BLUETOOTH (WINZWON LEDS)
+// 4. CONNEXION BLUETOOTH
 async function connectBluetoothWinzwon() {
     forceUnlockAudio();
     const btn = document.getElementById('bleBtn');
@@ -246,7 +243,7 @@ async function fetchWeather() {
     });
 }
 
-// 7. MOTEUR VOCAL FORCÉ ET RECYCLÉ
+// 7. MOTEUR VOCAL
 function setupVoiceEngine() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -314,7 +311,6 @@ function setupVoiceEngine() {
 
     recognition.onend = () => {
         isVoiceListening = false;
-        // Relance automatique immédiate si le système est actif
         if (isSystemActive) {
             setTimeout(() => {
                 startListeningLoop();
@@ -342,7 +338,6 @@ function startListeningLoop() {
     }
 }
 
-// FONCTION DE DÉCLENCHEMENT FORCÉ (CLIC / BOUTON)
 async function forceActivateSystem() {
     forceUnlockAudio();
     isSystemActive = true;
@@ -354,7 +349,6 @@ async function forceActivateSystem() {
         btn.style.color = "#00ff88";
     }
 
-    // Demande de permission microphone explicite
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -373,7 +367,6 @@ async function forceActivateSystem() {
     startListeningLoop();
 }
 
-// INITIALISATION
 window.addEventListener('DOMContentLoaded', () => {
     initBatteryAndGPS();
     fetchWeather();
