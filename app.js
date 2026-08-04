@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J.A.R.V.I.S. DASHBOARD - 100% TACTILE (ZERO RECONNAISSANCE VOCALE)
+   J.A.R.V.I.S. DASHBOARD - 100% TACTILE & OPTIMISÉ MOBILE
    ========================================================================== */
 
 let bleDevice = null;
@@ -9,11 +9,25 @@ let alertInterval = null;
 let SPEED_LIMIT_KMH = 110;
 let audioCtx = null;
 let currentSpeed = 0;
+let synthVoices = [];
 
 const WINZWON_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 const WINZWON_CHARACTERISTIC_UUID = "0000fff3-0000-1000-8000-00805f9b34fb";
 
-// 1. SYNTHÈSE VOCALE (JARVIS PARLE QUAND ON TAPE UN BOUTON)
+// 1. GESTION DES VOIX ET AUDIO SUR MOBILE
+function loadVoices() {
+    if ('speechSynthesis' in window) {
+        synthVoices = window.speechSynthesis.getVoices();
+    }
+}
+
+if ('speechSynthesis' in window) {
+    loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+    }
+}
+
 function initAudioEngine() {
     if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -26,13 +40,21 @@ function initAudioEngine() {
 
 function speak(text) {
     initAudioEngine();
+    
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // Annule la parole précédente
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'fr-FR';
         utterance.rate = 0.95;
         utterance.pitch = 0.85;
-        
+
+        if (synthVoices.length === 0) loadVoices();
+        const frVoice = synthVoices.find(v => v.lang && v.lang.includes('fr'));
+        if (frVoice) {
+            utterance.voice = frVoice;
+        }
+
         const speechText = document.getElementById('speechText');
         if (speechText) speechText.textContent = text.toUpperCase();
 
@@ -90,8 +112,10 @@ function toggleSwitchMode() {
 }
 
 function playMusicControl() {
-    speak("Lancement de la playlist audio, Monsieur. Bon voyage.");
-    window.location.href = "intent://open/#Intent;scheme=music;package=com.google.android.music;end";
+    speak("Lancement de YouTube, Monsieur. Bon voyage.");
+    setTimeout(() => {
+        window.location.href = "intent://www.youtube.com/#Intent;scheme=https;package=com.google.android.youtube;end";
+    }, 1500);
 }
 
 function speakStatusReport() {
@@ -274,7 +298,24 @@ async function fetchWeather() {
     });
 }
 
+// 7. INITIALISATION ET ENREGISTREMENT SERVICE WORKER
 window.addEventListener('DOMContentLoaded', () => {
     initBatteryAndGPS();
     fetchWeather();
 });
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then((registration) => {
+            registration.update();
+            registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        window.location.reload();
+                    }
+                };
+            };
+        });
+    });
+}
