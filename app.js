@@ -1,49 +1,65 @@
 /* ==========================================================================
-   J.A.R.V.I.S. SYSTEM - CORE CONTROLLER & VOICE RECOGNITION
+   J.A.R.V.I.S. SYSTEM - CORE CONTROLLER & VOICE RECOGNITION (MOBILE READY)
    ========================================================================== */
 
 // 1. CONFIGURATION & VARIABLES GLOBALES
 let bleDevice = null;
 let bleCharacteristic = null;
-let currentMode = 'standard'; // Suivi de l'état pour la commande "switch"
-let alertInterval = null;     // Intervalle pour le clignotement du mode Alert
-let SPEED_LIMIT_KMH = 110;    // Seuil de vitesse excessive (km/h)
+let currentMode = 'standard';
+let alertInterval = null;
+let SPEED_LIMIT_KMH = 110;
+
+let audioCtx = null; // AudioContext global débloqué au clic
+let recognition = null;
+let isVoiceListening = false;
 
 const WINZWON_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 const WINZWON_CHARACTERISTIC_UUID = "0000fff3-0000-1000-8000-00805f9b34fb";
 
+// Déblocage du système audio mobile (Requis pour iOS/Android)
+function initAudioContext() {
+    if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+        }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
 // Synthèse Vocale (J.A.R.V.I.S. parle)
 function speak(text) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stoppe la parole en cours
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'fr-FR';
         utterance.rate = 1.0;
-        utterance.pitch = 0.9; // Voix légèrement plus grave style JARVIS
+        utterance.pitch = 0.9;
         window.speechSynthesis.speak(utterance);
     }
 }
 
-// Générateur de Bip d'Alerte Tactique (Double Tonalité Warning style Cockpit)
+// Bip d'Alerte Tactique Mobile-Friendly
 function playWarningBeep() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        
-        const audioCtx = new AudioContext();
+        initAudioContext();
+        if (!audioCtx) return;
+
         const now = audioCtx.currentTime;
 
-        // Ton 1 : Impulsion aiguë principale
+        // Ton 1 : Impulsion aiguë
         const osc1 = audioCtx.createOscillator();
         const gain1 = audioCtx.createGain();
-        osc1.type = 'square'; // Onde carrée style cockpit
+        osc1.type = 'square';
         osc1.frequency.setValueAtTime(960, now);
         gain1.gain.setValueAtTime(0.12, now);
         gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
         osc1.connect(gain1);
         gain1.connect(audioCtx.destination);
 
-        // Ton 2 : Sous-harmonique de choc
+        // Ton 2 : Sous-harmonique
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.type = 'sawtooth';
@@ -62,7 +78,6 @@ function playWarningBeep() {
     }
 }
 
-// Stop le clignotement si actif
 function stopAlertBlinking() {
     if (alertInterval) {
         clearInterval(alertInterval);
@@ -85,12 +100,11 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// 3. GESTION DES MODES ET DES LEDS BLE
+// 3. GESTION DES MODES
 function setMode(mode) {
     const body = document.body;
     const modeDisplay = document.getElementById('modeDisplay');
     
-    // Nettoyage des animations et classes de mode
     stopAlertBlinking();
     body.classList.remove('mode-standard', 'mode-overdrive', 'mode-chill', 'mode-alert');
     currentMode = mode;
@@ -99,43 +113,43 @@ function setMode(mode) {
         case 'chill':
             body.classList.add('mode-chill');
             if (modeDisplay) modeDisplay.textContent = 'CHILL';
-            sendBleColor(0xff, 0x00, 0x80); // Rose Néon
+            sendBleColor(0xff, 0x00, 0x80);
             break;
 
         case 'overdrive':
             body.classList.add('mode-overdrive');
             if (modeDisplay) modeDisplay.textContent = 'OVERDRIVE';
-            sendBleColor(0xff, 0x00, 0x00); // Rouge Vif
+            sendBleColor(0xff, 0x00, 0x00);
             break;
 
         case 'alert':
             body.classList.add('mode-alert');
             if (modeDisplay) modeDisplay.textContent = 'ALERT';
             
-            // Clignotement Jaune Chaud Vif (255, 200, 0) + Bip Warning Tactique
             let isYellowOn = false;
             alertInterval = setInterval(() => {
                 if (isYellowOn) {
-                    sendBleColor(0x00, 0x00, 0x00); // Éteint
+                    sendBleColor(0x00, 0x00, 0x00);
                 } else {
-                    sendBleColor(0xff, 0xc8, 0x00); // Jaune Ambre Chaud Pur
-                    playWarningBeep();             // Signal bi-ton
+                    sendBleColor(0xff, 0xc8, 0x00);
+                    playWarningBeep();
                 }
                 isYellowOn = !isYellowOn;
-            }, 400); // Cadence dynamique
+            }, 400);
             break;
 
         case 'standard':
         default:
             body.classList.add('mode-standard');
             if (modeDisplay) modeDisplay.textContent = 'STD';
-            sendBleColor(0x00, 0xf3, 0xff); // Cyan Cyan
+            sendBleColor(0x00, 0xf3, 0xff);
             break;
     }
 }
 
-// 4. CONNEXION ET ENVOI BLUETOOTH (WINZWON LEDS)
+// 4. BLUETOOTH
 async function connectBluetoothWinzwon() {
+    initAudioContext();
     const btn = document.getElementById('bleBtn');
     try {
         if (btn) btn.textContent = "RECHERCHE...";
@@ -154,7 +168,7 @@ async function connectBluetoothWinzwon() {
             btn.style.borderColor = "#00ff88";
             btn.style.color = "#00ff88";
         }
-        speak("Connexion Bluetooth établie avec les LEDs Winzwon, Monsieur.");
+        speak("Connexion Bluetooth établie avec les LEDs, Monsieur.");
     } catch (error) {
         console.error("Erreur Bluetooth :", error);
         if (btn) btn.textContent = "ÉTABLIR LA CONNEXION BLE ⚡";
@@ -164,14 +178,12 @@ async function connectBluetoothWinzwon() {
 
 function sendBleColor(r, g, b) {
     if (!bleCharacteristic) return;
-    // Trame standard pour ruban LED Winzwon BLE
     const data = new Uint8Array([0x7e, 0x07, 0x05, 0x03, r, g, b, 0x00, 0xef]);
-    bleCharacteristic.writeValue(data).catch(err => console.log("Erreur envoi BLE:", err));
+    bleCharacteristic.writeValue(data).catch(err => console.log("Erreur BLE:", err));
 }
 
-// 5. BATTERIE ET GÉOLOCALISATION / VITESSE (SURVEILLANCE VITESSE EXCESSIVE)
+// 5. BATTERIE ET GPS
 function initBatteryAndGPS() {
-    // Batterie
     if ('getBattery' in navigator) {
         navigator.getBattery().then(battery => {
             function updateBatteryInfo() {
@@ -190,11 +202,10 @@ function initBatteryAndGPS() {
         });
     }
 
-    // Vitesse GPS et alerte automatique
     if ('geolocation' in navigator) {
         navigator.geolocation.watchPosition(
             (position) => {
-                const speed = position.coords.speed; // en m/s
+                const speed = position.coords.speed;
                 const speedKmH = speed ? Math.round(speed * 3.6) : 0;
                 const speedVal = document.getElementById('speedVal');
                 const headingVal = document.getElementById('headingVal');
@@ -204,13 +215,12 @@ function initBatteryAndGPS() {
                     headingVal.textContent = `DIR (${Math.round(position.coords.heading)}°)`;
                 }
 
-                // DÉTECTION VITESSE EXCESSIVE (Seuil 110 km/h)
                 if (speedKmH >= SPEED_LIMIT_KMH && currentMode !== 'alert') {
                     setMode('alert');
-                    speak(`Attention Monsieur, vitesse excessive détectée. Vous roulez à ${speedKmH} kilomètres heure. Veuillez réduire votre allure.`);
+                    speak(`Attention Monsieur, vitesse excessive. Vous roulez à ${speedKmH} kilomètres heure.`);
                 } else if (speedKmH < SPEED_LIMIT_KMH && currentMode === 'alert') {
                     setMode('standard');
-                    speak("Vitesse réinitialisée sous le seuil critique. Retour au mode Standard.");
+                    speak("Vitesse sous le seuil critique. Retour au mode Standard.");
                 }
             },
             (err) => console.log("Erreur GPS :", err),
@@ -219,7 +229,7 @@ function initBatteryAndGPS() {
     }
 }
 
-// 6. MÉTÉO (Optionnelle via Open-Meteo API)
+// 6. MÉTÉO
 async function fetchWeather() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -243,23 +253,25 @@ async function fetchWeather() {
     });
 }
 
-// 7. RECONNAISSANCE VOCALE INTELLIGENTE (J.A.R.V.I.S.)
+// 7. RECONNAISSANCE VOCALE MOBILE-OPTIMIZED
 function initVoiceRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
         const speechText = document.getElementById('speechText');
-        if (speechText) speechText.textContent = "RECONNAISSANCE VOCALE NON SUPPORTÉE";
+        if (speechText) speechText.textContent = "RECONNAISSANCE VOCALE NON SUPPORTÉE SUR CE NAVIGATEUR";
         return;
     }
 
-    const recognition = new SpeechRecognition();
+    recognition = new SpeechRecognition();
     recognition.lang = 'fr-FR';
     recognition.continuous = true;
     recognition.interimResults = false;
 
     recognition.onstart = () => {
-        console.log("J.A.R.V.I.S. à l'écoute...");
+        isVoiceListening = true;
+        const speechText = document.getElementById('speechText');
+        if (speechText) speechText.textContent = "J.A.R.V.I.S. À L'ÉCOUTE...";
     };
 
     recognition.onresult = (event) => {
@@ -269,17 +281,11 @@ function initVoiceRecognition() {
         const speechText = document.getElementById('speechText');
         if (speechText) speechText.textContent = `"${transcript.toUpperCase()}"`;
 
-        console.log("Commande reçue :", transcript);
-
-        // Détection élargie de la commande "switch"
         const hasSwitch = transcript.includes("switch") || 
                           transcript.includes("switche") || 
                           transcript.includes("suite") || 
                           transcript.includes("swich");
 
-        // --- DÉTECTION DES COMMANDES VOCALES ---
-
-        // A) MODE CHILL (Prononciations multiples)
         if (
             transcript.includes("chill") || 
             transcript.includes("tchill") || 
@@ -290,31 +296,25 @@ function initVoiceRecognition() {
             transcript.includes("kill")
         ) {
             setMode('chill');
-            speak("Activation du mode Chill, Monsieur. Éclairage néon activé.");
+            speak("Mode Chill activé, Monsieur.");
         }
-
-        // B) BASCULEMENT VIA "SWITCH" (Standard <-> Overdrive)
         else if (hasSwitch) {
             if (currentMode === 'overdrive') {
                 setMode('standard');
-                speak("Retour au mode Standard. Éclairage cyan rétabli.");
+                speak("Retour au mode Standard.");
             } else {
                 setMode('overdrive');
-                speak("Mode Overdrive engagé. Puissance maximale, éclairage rouge vif.");
+                speak("Mode Overdrive engagé.");
             }
         }
-
-        // C) MODE ALERTE MANUEL
         else if (
             transcript.includes("alerte") || 
             transcript.includes("alert") || 
             transcript.includes("danger")
         ) {
             setMode('alert');
-            speak("Alerte système activée. Éclairage jaune clignotant et signal sonore engagés.");
+            speak("Alerte système activée.");
         }
-
-        // D) CONNEXION BLUETOOTH
         else if (
             transcript.includes("connecte") || 
             transcript.includes("bluetooth") || 
@@ -322,33 +322,47 @@ function initVoiceRecognition() {
         ) {
             connectBluetoothWinzwon();
         }
-
-        // E) HORLOGE
         else if (transcript.includes("heure") || transcript.includes("horloge")) {
             const now = new Date();
-            speak(`Il est exactement ${now.getHours()} heures et ${now.getMinutes()} minutes, Monsieur.`);
+            speak(`Il est ${now.getHours()} heures ${now.getMinutes()}, Monsieur.`);
         }
     };
 
-    // Relance automatique de l'écoute si coupure
     recognition.onend = () => {
-        recognition.start();
+        isVoiceListening = false;
+        // Relance intelligente
+        setTimeout(() => {
+            try {
+                recognition.start();
+            } catch(e) {}
+        }, 300);
     };
 
     recognition.onerror = (err) => {
         console.log("Erreur reconnaissance :", err.error);
-        if (err.error !== 'no-speech') {
-            setTimeout(() => { recognition.start(); }, 1000);
+        if (err.error === 'not-allowed') {
+            alert("Veuillez autoriser l'accès au microphone dans les réglages de votre navigateur.");
         }
     };
-
-    // Démarrage de l'écoute
-    recognition.start();
 }
 
-// INITIALISATION AU CHARGEMENT DU DOM
+// DÉCLENCHEUR TACTILE POUR MOBILE
+function startJarvisSystem() {
+    initAudioContext();
+    if (recognition && !isVoiceListening) {
+        try {
+            recognition.start();
+        } catch(e) {}
+    }
+}
+
+// INITIALISATION
 window.addEventListener('DOMContentLoaded', () => {
     initBatteryAndGPS();
     fetchWeather();
     initVoiceRecognition();
+
+    // Ajout d'un écouteur sur tout l'écran pour débloquer l'audio/micro au premier clic
+    document.body.addEventListener('click', startJarvisSystem, { once: true });
+    document.body.addEventListener('touchstart', startJarvisSystem, { once: true });
 });
