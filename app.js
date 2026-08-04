@@ -70,7 +70,7 @@ function stopAlertBlinking() {
     }
 }
 
-// 2. RÉPONSES SCÉNARISÉES
+// 2. RÉPONSES SCÉNARISÉES ET ACTION MUSIQUE
 function triggerJarvisGreeting() {
     const greetings = [
         "Systèmes opérationnels. Je suis à votre entière disposition, Monsieur.",
@@ -87,6 +87,12 @@ function toggleSwitchMode() {
     } else {
         setMode('overdrive');
     }
+}
+
+function playMusicControl() {
+    speak("Lancement de la playlist audio, Monsieur. Bon voyage.");
+    // Vous pouvez ouvrir l'application de musique par défaut du système si souhaité
+    window.location.href = "intent://open/#Intent;scheme=music;package=com.google.android.music;end";
 }
 
 function speakStatusReport() {
