@@ -58,12 +58,12 @@
                 <p id="speechText">COMMANDES TACTILES PRÊTES</p>
             </div>
 
-            <!-- PANNEAU DE COMMANDES 100% TACTILE -->
+            <!-- PANNEAU DE COMMANDES TACTILES -->
             <div class="control-panel">
                 <button class="control-btn btn-chill" onclick="setMode('chill')">CHILL MODE</button>
                 <button class="control-btn btn-switch" onclick="toggleSwitchMode()">SWITCH (STD/OVER)</button>
                 <button class="control-btn btn-alert" onclick="setMode('alert')">ALERTE</button>
-                <button class="control-btn btn-music" onclick="playMusicControl()">MUSIQUE 🎵</button>
+                <button class="control-btn btn-music" onclick="playMusicControl()">YOUTUBE 🎵</button>
                 <button class="control-btn btn-info control-btn-full" onclick="speakStatusReport()">RAPPORT SYSTÈME 📊</button>
             </div>
         </main>
@@ -93,14 +93,5 @@
     </div>
 
     <script src="app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker J.A.R.V.I.S. actif'))
-                    .catch(err => console.log('Erreur SW:', err));
-            });
-        }
-    </script>
 </body>
 </html>
