@@ -1,4 +1,51 @@
-<!-- CENTRE : RÉACTEUR ARC STARK -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. - Dashboard</title>
+
+    <!-- Manifeste PWA & Meta Tags Mobile / iOS -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="J.A.R.V.I.S.">
+
+    <!-- Icône de l'application -->
+    <link rel="icon" type="image/jpeg" href="jarvis2.jpeg">
+    <link rel="apple-touch-icon" href="jarvis2.jpeg">
+    <meta name="theme-color" content="#00f3ff">
+
+    <!-- Fichier CSS principal -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-standard">
+
+    <div class="dashboard-container">
+        <!-- HEADER : Stats Systèmes -->
+        <header class="hud-header">
+            <div class="hud-box">
+                <span class="hud-label">HORLOGE</span>
+                <span id="clockVal" class="hud-value">--:--:--</span>
+            </div>
+
+            <!-- BOUTON BLE -->
+            <button id="bleBtn" class="hud-btn" onclick="connectBluetoothWinzwon()">
+                ÉTABLIR LA CONNEXION BLE ⚡
+            </button>
+
+            <div class="hud-box">
+                <span class="hud-label">BATTERIE</span>
+                <span id="batteryVal" class="hud-value">--%</span>
+                <div class="battery-bar-container">
+                    <div id="batteryBar" class="battery-bar"></div>
+                </div>
+                <span id="batteryStatus" class="hud-subtext">SUR BATTERIE</span>
+            </div>
+        </header>
+
+        <!-- CENTRE : RÉACTEUR ARC STARK -->
         <main class="hud-main">
             <div class="arc-container" id="arcBtn" style="cursor: pointer;">
                 <div class="arc-reactor">
@@ -19,3 +66,43 @@
                 <p id="speechText">TOUCHEZ L'ÉCRAN OU LE BOUTON POUR DÉMARRER</p>
             </div>
         </main>
+
+        <!-- FOOTER : Indicateurs de Conduite -->
+        <footer class="hud-footer">
+            <div class="hud-box">
+                <span class="hud-label">VITESSE GPS</span>
+                <div class="speed-display">
+                    <span id="speedVal" class="hud-value-large">0</span>
+                    <span class="unit">KM/H</span>
+                </div>
+                <span id="headingVal" class="hud-subtext">N (0°)</span>
+            </div>
+
+            <div class="hud-box">
+                <span class="hud-label">MODE ACTIF</span>
+                <span id="modeDisplay" class="hud-value-highlight">STD</span>
+            </div>
+
+            <div class="hud-box">
+                <span class="hud-label">MÉTÉO</span>
+                <span id="tempVal" class="hud-value">--°C</span>
+                <span id="weatherDesc" class="hud-subtext">RECHERCHE...</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Script JavaScript principal -->
+    <script src="app.js"></script>
+
+    <!-- Enregistrement du Service Worker PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker J.A.R.V.I.S. enregistré:', reg.scope))
+                    .catch(err => console.log('Échec Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>
