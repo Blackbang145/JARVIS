@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J.A.R.V.I.S. SYSTEM - CORE CONTROLLER & HARDWARE PERMISSION FORCE
+   J.A.R.V.I.S. TACTICAL DASHBOARD - SUZUKI DZIRE EDITION
    ========================================================================== */
 
 let bleDevice = null;
@@ -7,86 +7,59 @@ let bleCharacteristic = null;
 let currentMode = 'standard';
 let alertInterval = null;
 let SPEED_LIMIT_KMH = 110;
-
 let audioCtx = null;
-let recognition = null;
-let isVoiceListening = false;
-let isSystemActive = false;
+let currentSpeed = 0;
 
 const WINZWON_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 const WINZWON_CHARACTERISTIC_UUID = "0000fff3-0000-1000-8000-00805f9b34fb";
 
-// 1. FORÇAGE PERMISSION MICRO ET ACTIVATION HP AUDIO
-async function requestHardwarePermissions() {
-    const speechText = document.getElementById('speechText');
-
-    // Déblocage de l'AudioContext pour les HAUT-PARLEURS
+// 1. MOTEUR AUDIO ET SYNTHÈSE VOCALE
+function initAudioEngine() {
     if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (AudioContextClass) audioCtx = new AudioContextClass();
     }
     if (audioCtx && audioCtx.state === 'suspended') {
-        await audioCtx.resume();
+        audioCtx.resume();
     }
-
-    // Déblocage du moteur vocal SpeechSynthesis
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const silentUtterance = new SpeechSynthesisUtterance('Initialisation.');
-        silentUtterance.volume = 0.1;
-        silentUtterance.lang = 'fr-FR';
-        window.speechSynthesis.speak(silentUtterance);
-    }
-
-    // DEMANDE EXPLICITE D'ACCÈS AU MICROPHONE (Pop-up Android/Chrome)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-            if (speechText) speechText.textContent = "DEMANDE D'ACCÈS MICRO EN COURS...";
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            // Ferme le flux temporaire après validation de l'autorisation
-            stream.getTracks().forEach(track => track.stop());
-            return true;
-        } catch (err) {
-            console.error("Accès micro refusé par l'utilisateur :", err);
-            if (speechText) speechText.textContent = "❌ AUTORISEZ LE MICRO DANS Chrome/Android";
-            alert("Veuillez autoriser l'accès au microphone dans la fenêtre du navigateur pour utiliser J.A.R.V.I.S.");
-            return false;
-        }
-    }
-    return true;
 }
 
 function speak(text) {
+    initAudioEngine();
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'fr-FR';
-        utterance.rate = 1.0;
-        utterance.pitch = 0.9;
+        utterance.rate = 0.95;
+        utterance.pitch = 0.85;
+        
+        const speechText = document.getElementById('speechText');
+        if (speechText) speechText.textContent = text.toUpperCase();
+
         window.speechSynthesis.speak(utterance);
     }
 }
 
 function playWarningBeep() {
     try {
+        initAudioEngine();
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
 
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(880, now);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(900, now);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
         osc.connect(gain);
         gain.connect(audioCtx.destination);
 
         osc.start(now);
-        osc.stop(now + 0.2);
+        osc.stop(now + 0.25);
     } catch (e) {
-        console.log("Erreur audio warning :", e);
+        console.log("Erreur Beep :", e);
     }
 }
 
@@ -97,20 +70,36 @@ function stopAlertBlinking() {
     }
 }
 
-// 2. HORLOGE
-function updateClock() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    
-    const clockElement = document.getElementById('clockVal');
-    if (clockElement) clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+// 2. RÉPONSES SCÉNARISÉES
+function triggerJarvisGreeting() {
+    const greetings = [
+        "Systèmes opérationnels. Je suis à votre entière disposition, Monsieur.",
+        "Connexion à la télémétrie établie. Tous les modules fonctionnent dans les marges nominales.",
+        "Bonjour Monsieur. Réacteur ARC stabilisé à cent pour cent."
+    ];
+    const randomSpeech = greetings[Math.floor(Math.random() * greetings.length)];
+    speak(randomSpeech);
 }
-setInterval(updateClock, 1000);
-updateClock();
 
-// 3. MODES & BLE
+function toggleSwitchMode() {
+    if (currentMode === 'overdrive') {
+        setMode('standard');
+    } else {
+        setMode('overdrive');
+    }
+}
+
+function speakStatusReport() {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const batVal = document.getElementById('batteryVal')?.textContent || "inconnue";
+    const tempVal = document.getElementById('tempVal')?.textContent || "inconnue";
+
+    speak(`Rapport de situation, Monsieur. Il est ${hours} heures ${minutes}. La batterie est à ${batVal}. Vitesse actuelle : ${currentSpeed} kilomètres heure. Température extérieure : ${tempVal}.`);
+}
+
+// 3. GESTION DES MODES ET SÉCURITÉ
 function setMode(mode) {
     const body = document.body;
     const modeDisplay = document.getElementById('modeDisplay');
@@ -123,18 +112,21 @@ function setMode(mode) {
         case 'chill':
             body.classList.add('mode-chill');
             if (modeDisplay) modeDisplay.textContent = 'CHILL';
-            sendBleColor(0xff, 0x00, 0x80);
+            sendBleColor(0xff, 0x00, 0x80); // Rose Néon
+            speak("Mode Chill activé. Ambiance lumineuse ajustée et paramètres de conduite assouplis, Monsieur.");
             break;
 
         case 'overdrive':
             body.classList.add('mode-overdrive');
             if (modeDisplay) modeDisplay.textContent = 'OVERDRIVE';
-            sendBleColor(0xff, 0x00, 0x00);
+            sendBleColor(0xff, 0x00, 0x00); // Rouge Vif
+            speak("Mode Overdrive engagé. Réponse châssis et télémétrie prioritaires.");
             break;
 
         case 'alert':
             body.classList.add('mode-alert');
             if (modeDisplay) modeDisplay.textContent = 'ALERT';
+            speak("Alerte, veuillez ralentir et rouler prudemment.");
             
             let isYellowOn = false;
             alertInterval = setInterval(() => {
@@ -145,24 +137,25 @@ function setMode(mode) {
                     playWarningBeep();
                 }
                 isYellowOn = !isYellowOn;
-            }, 400);
+            }, 350);
             break;
 
         case 'standard':
         default:
             body.classList.add('mode-standard');
             if (modeDisplay) modeDisplay.textContent = 'STD';
-            sendBleColor(0x00, 0xf3, 0xff);
+            sendBleColor(0x00, 0xf3, 0xff); // Cyan HUD
+            speak("Mode Standard rétabli. Paramètres d'usine appliqués.");
             break;
     }
 }
 
-// 4. BLUETOOTH
+// 4. BLUETOOTH BLE AVEC ACCUEIL PERSONNALISÉ SUZUKI DZIRE
 async function connectBluetoothWinzwon() {
-    await requestHardwarePermissions();
+    initAudioEngine();
     const btn = document.getElementById('bleBtn');
     try {
-        if (btn) btn.textContent = "RECHERCHE...";
+        if (btn) btn.textContent = "RECHERCHE BLE...";
         
         bleDevice = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -174,25 +167,39 @@ async function connectBluetoothWinzwon() {
         bleCharacteristic = await service.getCharacteristic(WINZWON_CHARACTERISTIC_UUID);
 
         if (btn) {
-            btn.textContent = "LED CONNECTÉES ⚡";
+            btn.textContent = "LIAISON BLE ACTIVE ⚡";
             btn.style.borderColor = "#00ff88";
             btn.style.color = "#00ff88";
         }
-        speak("Connexion Bluetooth établie avec les LEDs Winzwon, Monsieur.");
+
+        speak("Bienvenue à bord de la Suzuki Dizailleur, Monsieur. Je vous souhaite un bon trajet.");
+
     } catch (error) {
-        console.error("Erreur Bluetooth :", error);
-        if (btn) btn.textContent = "ÉTABLIR LA CONNEXION BLE ⚡";
-        speak("Échec de la connexion Bluetooth.");
+        console.error("Erreur BLE :", error);
+        if (btn) btn.textContent = "ÉTABLIR LIAISON BLE ⚡";
+        speak("Échec de la connexion Bluetooth avec le véhicule.");
     }
 }
 
 function sendBleColor(r, g, b) {
     if (!bleCharacteristic) return;
     const data = new Uint8Array([0x7e, 0x07, 0x05, 0x03, r, g, b, 0x00, 0xef]);
-    bleCharacteristic.writeValue(data).catch(err => console.log("Erreur envoi BLE:", err));
+    bleCharacteristic.writeValue(data).catch(err => console.log("Erreur BLE:", err));
 }
 
-// 5. BATTERIE ET GPS
+// 5. HORLOGE, BATTERIE ET GPS
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const clockElement = document.getElementById('clockVal');
+    if (clockElement) clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
 function initBatteryAndGPS() {
     if ('getBattery' in navigator) {
         navigator.getBattery().then(battery => {
@@ -216,24 +223,23 @@ function initBatteryAndGPS() {
         navigator.geolocation.watchPosition(
             (position) => {
                 const speed = position.coords.speed;
-                const speedKmH = speed ? Math.round(speed * 3.6) : 0;
+                currentSpeed = speed ? Math.round(speed * 3.6) : 0;
                 const speedVal = document.getElementById('speedVal');
                 const headingVal = document.getElementById('headingVal');
 
-                if (speedVal) speedVal.textContent = speedKmH;
+                if (speedVal) speedVal.textContent = currentSpeed;
                 if (headingVal && position.coords.heading !== null) {
-                    headingVal.textContent = `DIR (${Math.round(position.coords.heading)}°)`;
+                    headingVal.textContent = `CAP ${Math.round(position.coords.heading)}°`;
                 }
 
-                if (speedKmH >= SPEED_LIMIT_KMH && currentMode !== 'alert') {
+                if (currentSpeed >= SPEED_LIMIT_KMH && currentMode !== 'alert') {
                     setMode('alert');
-                    speak("Attention Monsieur, vitesse excessive. Veuillez ralentir.");
-                } else if (speedKmH < SPEED_LIMIT_KMH && currentMode === 'alert') {
+                } else if (currentSpeed < SPEED_LIMIT_KMH && currentMode === 'alert') {
                     setMode('standard');
-                    speak("Vitesse réinitialisée sous le seuil critique.");
+                    speak("Vitesse de nouveau stabilisée sous le seuil de sécurité.");
                 }
             },
-            (err) => console.log("Erreur GPS :", err),
+            (err) => console.log("GPS :", err),
             { enableHighAccuracy: true }
         );
     }
@@ -255,137 +261,15 @@ async function fetchWeather() {
                 const weatherDesc = document.getElementById('weatherDesc');
                 
                 if (tempVal) tempVal.textContent = `${temp}°C`;
-                if (weatherDesc) weatherDesc.textContent = "EN DIRECT";
+                if (weatherDesc) weatherDesc.textContent = "CAPTEUR OPTIMAL";
             }
         } catch (e) {
-            console.log("Erreur météo:", e);
+            console.log("Erreur Météo :", e);
         }
     });
-}
-
-// 7. MOTEUR VOCAL RECYCLÉ
-function setupVoiceEngine() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        const speechText = document.getElementById('speechText');
-        if (speechText) speechText.textContent = "NAVIGATEUR NON COMPATIBLE";
-        return;
-    }
-
-    recognition = new SpeechRecognition();
-    recognition.lang = 'fr-FR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => {
-        isVoiceListening = true;
-        const speechText = document.getElementById('speechText');
-        if (speechText) speechText.textContent = "🔴 J.A.R.V.I.S. À L'ÉCOUTE...";
-    };
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.toLowerCase().trim();
-        const speechText = document.getElementById('speechText');
-        if (speechText) speechText.textContent = `"${transcript.toUpperCase()}"`;
-
-        console.log("Commande reçue :", transcript);
-
-        const hasSwitch = transcript.includes("switch") || 
-                          transcript.includes("switche") || 
-                          transcript.includes("suite") || 
-                          transcript.includes("swich");
-
-        if (
-            transcript.includes("chill") || 
-            transcript.includes("tchill") || 
-            transcript.includes("chille") || 
-            transcript.includes("tchille") ||
-            transcript.includes("qu'il") || 
-            transcript.includes("quil") || 
-            transcript.includes("kill")
-        ) {
-            setMode('chill');
-            speak("Activation du mode Chill, Monsieur.");
-        }
-        else if (hasSwitch) {
-            if (currentMode === 'overdrive') {
-                setMode('standard');
-                speak("Retour au mode Standard.");
-            } else {
-                setMode('overdrive');
-                speak("Mode Overdrive engagé.");
-            }
-        }
-        else if (transcript.includes("alerte") || transcript.includes("alert") || transcript.includes("danger")) {
-            setMode('alert');
-            speak("Alerte système activée.");
-        }
-        else if (transcript.includes("connecte") || transcript.includes("bluetooth") || transcript.includes("led")) {
-            connectBluetoothWinzwon();
-        }
-        else if (transcript.includes("heure") || transcript.includes("horloge")) {
-            const now = new Date();
-            speak(`Il est exactement ${now.getHours()} heures et ${now.getMinutes()} minutes.`);
-        }
-    };
-
-    recognition.onend = () => {
-        isVoiceListening = false;
-        if (isSystemActive) {
-            setTimeout(() => {
-                startListeningLoop();
-            }, 200);
-        }
-    };
-
-    recognition.onerror = (err) => {
-        isVoiceListening = false;
-        console.log("Erreur vocal :", err.error);
-        if (isSystemActive && (err.error === 'no-speech' || err.error === 'network' || err.error === 'aborted')) {
-            setTimeout(() => {
-                startListeningLoop();
-            }, 300);
-        }
-    };
-}
-
-function startListeningLoop() {
-    if (!recognition || isVoiceListening) return;
-    try {
-        recognition.start();
-    } catch (e) {
-        console.log("Tentative redémarrage micro...", e);
-    }
-}
-
-// FONCTION DE DÉCLENCHEMENT PRINCIPALE
-async function forceActivateSystem() {
-    const hasPermission = await requestHardwarePermissions();
-    if (!hasPermission) return;
-
-    isSystemActive = true;
-
-    const btn = document.getElementById('forceStartBtn');
-    if (btn) {
-        btn.textContent = "SYSTÈME ACTIF 🟢";
-        btn.style.borderColor = "#00ff88";
-        btn.style.color = "#00ff88";
-    }
-
-    if (!recognition) setupVoiceEngine();
-    
-    speak("Système vocal et audio activés, Monsieur.");
-    startListeningLoop();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
     initBatteryAndGPS();
     fetchWeather();
-    setupVoiceEngine();
-
-    const forceBtn = document.getElementById('forceStartBtn');
-    const arcBtn = document.getElementById('arcBtn');
-
-    if (forceBtn) forceBtn.addEventListener('click', forceActivateSystem);
-    if (arcBtn) arcBtn.addEventListener('click', forceActivateSystem);
 });
