@@ -1,0 +1,21 @@
+{
+  "short_name": "J.A.R.V.I.S.",
+  "name": "J.A.R.V.I.S. HUD Dashboard",
+  "icons": [
+    {
+      "src": "jarvis2.jpeg",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    },
+    {
+      "src": "jarvis2.jpeg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#03070d",
+  "theme_color": "#00f3ff",
+  "display": "standalone",
+  "orientation": "landscape"
+}
