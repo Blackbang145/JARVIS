@@ -5,10 +5,10 @@ const ASSETS = [
   './style.css',
   './app.js',
   './jarvis2.jpeg',
-  './manifest.json'
+  './manifest.json',
+  './status.json'
 ];
 
-// Installation & mise en cache des fichiers
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -18,7 +18,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activation & nettoyage des anciens caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -34,7 +33,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interception des requêtes (Stratégie: Cache puis Réseau)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
