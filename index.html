@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S. - Dashboard Suzuki</title>
+    <title>J.A.R.V.I.S. - Dashboard</title>
 
-    <!-- Icône de l'application uniquement (Onglet navigateur & Écran d'accueil mobile) -->
+    <!-- Icône de l'application -->
     <link rel="icon" type="image/jpeg" href="jarvis2.jpeg">
     <link rel="apple-touch-icon" href="jarvis2.jpeg">
-    <meta name="theme-color" content="#0d1b2a">
+    <meta name="theme-color" content="#050b14">
 
     <!-- Fichier CSS principal -->
     <link rel="stylesheet" href="style.css">
@@ -16,15 +16,16 @@
 <body class="mode-standard">
 
     <div class="dashboard-container">
-        <!-- HEADER : Horloge & Bouton BLE -->
+        <!-- HEADER : Stats Systèmes -->
         <header class="hud-header">
             <div class="hud-box">
                 <span class="hud-label">HORLOGE</span>
                 <span id="clockVal" class="hud-value">--:--:--</span>
             </div>
 
+            <!-- BOUTON MIS À JOUR -->
             <button id="bleBtn" class="hud-btn" onclick="connectBluetoothWinzwon()">
-                CONNECTER LEDS BLE ⚡
+                ÉTABLIR LA CONNEXION BLE ⚡
             </button>
 
             <div class="hud-box">
@@ -37,14 +38,24 @@
             </div>
         </header>
 
-        <!-- CENTRE : Visualiseur / Texte HUD -->
+        <!-- CENTRE : RÉACTEUR ARC STARK DE NOUVELLE GÉNÉRATION -->
         <main class="hud-main">
+            <div class="arc-container">
+                <div class="arc-reactor">
+                    <div class="outer-ring"></div>
+                    <div class="tech-ring"></div>
+                    <div class="inner-ring"></div>
+                    <div class="segment-ring"></div>
+                    <div class="core-glow"></div>
+                </div>
+            </div>
+
             <div class="speech-hud">
-                <p id="speechText">EN ATTENTE D'ACTIVATION...</p>
+                <p id="speechText">SYSTÈME J.A.R.V.I.S. PRÊT AU COMMANDE</p>
             </div>
         </main>
 
-        <!-- FOOTER : Vitesse GPS, Direction, Météo & Mode -->
+        <!-- FOOTER : Indicateurs de Conduite -->
         <footer class="hud-footer">
             <div class="hud-box">
                 <span class="hud-label">VITESSE GPS</span>
