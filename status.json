@@ -1,18 +1,38 @@
 {
-  "system": "J.A.R.V.I.S.",
-  "version": "1.0.0",
-  "status": "ONLINE",
-  "vehicle": "Suzuki Dzire",
-  "active_mode": "standard",
+  "system": {
+    "name": "J.A.R.V.I.S. Tactical Dashboard",
+    "version": "2.0.0",
+    "vehicle": "Suzuki Dzire",
+    "status": "ONLINE",
+    "input_mode": "TOUCH_ONLY"
+  },
   "modules": {
-    "telemetry_gps": true,
-    "ble_led_controller": true,
-    "speech_recognition": true,
-    "weather_api": true
+    "touchInterface": {
+      "enabled": true,
+      "status": "ACTIVE"
+    },
+    "voiceRecognition": {
+      "enabled": false,
+      "status": "DISABLED"
+    },
+    "textToSpeech": {
+      "enabled": true,
+      "status": "ACTIVE"
+    },
+    "bluetoothWinzwon": {
+      "enabled": true,
+      "serviceUUID": "0000fff0-0000-1000-8000-00805f9b34fb",
+      "characteristicUUID": "0000fff3-0000-1000-8000-00805f9b34fb"
+    },
+    "telemetryGPS": {
+      "enabled": true,
+      "speedLimit": 110
+    }
   },
-  "config": {
-    "speed_limit_kmh": 110,
-    "language": "fr-FR"
-  },
-  "last_updated": "2026-08-04T17:15:00Z"
+  "colorProfiles": {
+    "standard": "#00f3ff",
+    "overdrive": "#ff0055",
+    "chill": "#ff0080",
+    "alert": "#ffb700"
+  }
 }
