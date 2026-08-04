@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J.A.R.V.I.S. SYSTEM - CORE CONTROLLER & VOICE ENGINE (PWA READY)
+   J.A.R.V.I.S. SYSTEM - CORE CONTROLLER & HARDWARE PERMISSION FORCE
    ========================================================================== */
 
 let bleDevice = null;
@@ -16,23 +16,45 @@ let isSystemActive = false;
 const WINZWON_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 const WINZWON_CHARACTERISTIC_UUID = "0000fff3-0000-1000-8000-00805f9b34fb";
 
-// 1. DÉBLOCAGE AUDIO ET PAROLE
-function forceUnlockAudio() {
+// 1. FORÇAGE PERMISSION MICRO ET ACTIVATION HP AUDIO
+async function requestHardwarePermissions() {
+    const speechText = document.getElementById('speechText');
+
+    // Déblocage de l'AudioContext pour les HAUT-PARLEURS
     if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) {
-            audioCtx = new AudioContextClass();
-        }
+        if (AudioContextClass) audioCtx = new AudioContextClass();
     }
     if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        await audioCtx.resume();
     }
 
+    // Déblocage du moteur vocal SpeechSynthesis
     if ('speechSynthesis' in window) {
-        const silentUtterance = new SpeechSynthesisUtterance('');
-        silentUtterance.volume = 0;
+        window.speechSynthesis.cancel();
+        const silentUtterance = new SpeechSynthesisUtterance('Initialisation.');
+        silentUtterance.volume = 0.1;
+        silentUtterance.lang = 'fr-FR';
         window.speechSynthesis.speak(silentUtterance);
     }
+
+    // DEMANDE EXPLICITE D'ACCÈS AU MICROPHONE (Pop-up Android/Chrome)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            if (speechText) speechText.textContent = "DEMANDE D'ACCÈS MICRO EN COURS...";
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Ferme le flux temporaire après validation de l'autorisation
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+        } catch (err) {
+            console.error("Accès micro refusé par l'utilisateur :", err);
+            if (speechText) speechText.textContent = "❌ AUTORISEZ LE MICRO DANS Chrome/Android";
+            alert("Veuillez autoriser l'accès au microphone dans la fenêtre du navigateur pour utiliser J.A.R.V.I.S.");
+            return false;
+        }
+    }
+    return true;
 }
 
 function speak(text) {
@@ -48,9 +70,7 @@ function speak(text) {
 
 function playWarningBeep() {
     try {
-        forceUnlockAudio();
         if (!audioCtx) return;
-
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -90,7 +110,7 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// 3. GESTION DES MODES & BLE
+// 3. MODES & BLE
 function setMode(mode) {
     const body = document.body;
     const modeDisplay = document.getElementById('modeDisplay');
@@ -103,13 +123,13 @@ function setMode(mode) {
         case 'chill':
             body.classList.add('mode-chill');
             if (modeDisplay) modeDisplay.textContent = 'CHILL';
-            sendBleColor(0xff, 0x00, 0x80); // Rose Néon
+            sendBleColor(0xff, 0x00, 0x80);
             break;
 
         case 'overdrive':
             body.classList.add('mode-overdrive');
             if (modeDisplay) modeDisplay.textContent = 'OVERDRIVE';
-            sendBleColor(0xff, 0x00, 0x00); // Rouge Vif
+            sendBleColor(0xff, 0x00, 0x00);
             break;
 
         case 'alert':
@@ -132,14 +152,14 @@ function setMode(mode) {
         default:
             body.classList.add('mode-standard');
             if (modeDisplay) modeDisplay.textContent = 'STD';
-            sendBleColor(0x00, 0xf3, 0xff); // Cyan Cyan
+            sendBleColor(0x00, 0xf3, 0xff);
             break;
     }
 }
 
-// 4. CONNEXION BLUETOOTH
+// 4. BLUETOOTH
 async function connectBluetoothWinzwon() {
-    forceUnlockAudio();
+    await requestHardwarePermissions();
     const btn = document.getElementById('bleBtn');
     try {
         if (btn) btn.textContent = "RECHERCHE...";
@@ -243,7 +263,7 @@ async function fetchWeather() {
     });
 }
 
-// 7. MOTEUR VOCAL
+// 7. MOTEUR VOCAL RECYCLÉ
 function setupVoiceEngine() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -338,8 +358,11 @@ function startListeningLoop() {
     }
 }
 
+// FONCTION DE DÉCLENCHEMENT PRINCIPALE
 async function forceActivateSystem() {
-    forceUnlockAudio();
+    const hasPermission = await requestHardwarePermissions();
+    if (!hasPermission) return;
+
     isSystemActive = true;
 
     const btn = document.getElementById('forceStartBtn');
@@ -347,18 +370,6 @@ async function forceActivateSystem() {
         btn.textContent = "SYSTÈME ACTIF 🟢";
         btn.style.borderColor = "#00ff88";
         btn.style.color = "#00ff88";
-    }
-
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-        } catch (err) {
-            console.error("Accès micro refusé :", err);
-            const speechText = document.getElementById('speechText');
-            if (speechText) speechText.textContent = "ERREUR : AUTORISER LE MICRO DANS LE NAVIGATEUR";
-            return;
-        }
     }
 
     if (!recognition) setupVoiceEngine();
