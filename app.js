@@ -266,7 +266,7 @@ function initVoiceRecognition() {
     
     if (!SpeechRecognition) {
         const speechText = document.getElementById('speechText');
-        if (speechText) speechText.textContent = "RECONNAISSANCE VOCALE NON SUPPORTÉE";
+        if (speechText) speechText.textContent = "MICRO NON SUPPORTÉ (UTILISER CHROME/HTTPS)";
         return;
     }
 
@@ -279,7 +279,7 @@ function initVoiceRecognition() {
         isVoiceListening = true;
         console.log("J.A.R.V.I.S. à l'écoute...");
         const speechText = document.getElementById('speechText');
-        if (speechText) speechText.textContent = "J.A.R.V.I.S. À L'ÉCOUTE...";
+        if (speechText) speechText.textContent = "🎙️ J.A.R.V.I.S. À L'ÉCOUTE...";
     };
 
     recognition.onresult = (event) => {
@@ -353,39 +353,38 @@ function initVoiceRecognition() {
     // Relance automatique intelligente
     recognition.onend = () => {
         isVoiceListening = false;
-        setTimeout(() => {
-            try {
-                recognition.start();
-            } catch(e) {}
-        }, 300);
+        if (isVoiceListening) {
+            setTimeout(() => {
+                try { recognition.start(); } catch(e) {}
+            }, 300);
+        }
     };
 
     recognition.onerror = (err) => {
         console.log("Erreur reconnaissance :", err.error);
-        if (err.error === 'not-allowed') {
-            alert("Veuillez autoriser l'accès au microphone dans les réglages de votre navigateur mobile.");
-        }
+        const speechText = document.getElementById('speechText');
+        if (speechText) speechText.textContent = `ERREUR MICRO: ${err.error.toUpperCase()}`;
     };
 }
 
-// DÉCLENCHEUR TACTILE POUR MOBILE (DÉBLOQUE MICRO + AUDIO)
+// BOUTON TACTILE D'ACTIVATION MOBILE (DÉBLOQUE MICRO + AUDIO)
 async function startJarvisSystem() {
     initAudioContext();
+    const speechText = document.getElementById('speechText');
     
-    // Demande d'accès explicite au micro pour téléphone
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
+    try {
+        // Demande d'accès explicite au flux matériel du micro pour mobile
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop()); // Libère le flux après autorisation
-        } catch (err) {
-            console.log("Erreur permission micro mobile :", err);
         }
-    }
 
-    if (recognition && !isVoiceListening) {
-        try {
+        if (recognition && !isVoiceListening) {
             recognition.start();
-        } catch(e) {}
+        }
+    } catch (err) {
+        if (speechText) speechText.textContent = "ACCÈS MICRO REFUSÉ / VÉRIFIER HTTPS";
+        console.error("Erreur accès micro mobile :", err);
     }
 }
 
@@ -395,7 +394,14 @@ window.addEventListener('DOMContentLoaded', () => {
     fetchWeather();
     initVoiceRecognition();
 
-    // Attachement de l'interaction tactile pour mobile
+    // Associe le déclenchement au clic sur le cadre de statut texte (très visible sur mobile)
+    const speechBox = document.getElementById('speechText');
+    if (speechBox) {
+        speechBox.style.cursor = "pointer";
+        speechBox.addEventListener('click', startJarvisSystem);
+        speechBox.addEventListener('touchstart', startJarvisSystem);
+    }
+    
+    // Déclencheur tactile de secours global
     document.body.addEventListener('click', startJarvisSystem, { once: true });
-    document.body.addEventListener('touchstart', startJarvisSystem, { once: true });
 });
